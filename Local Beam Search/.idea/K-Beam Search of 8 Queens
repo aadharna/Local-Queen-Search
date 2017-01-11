@@ -1,0 +1,161 @@
+#
+# Aaron Dharna
+# 1/11/2017
+# 8 Queens Problem
+# K-Beam Search
+#
+#
+# This will be using a simplified version where the board is collapsed into a 1-d array
+# e.g. b = [5, 1, 3, 2, 4, 0, 7, 6] OR 51345076
+#
+
+import random
+
+ScoredboardDB = {}
+
+def listToString(list):
+    '''
+        return a string version of the passed list
+    :param list: 8-queen board as an array. e.g. [5, 1, 3, 2, 4, 0, 7, 6]
+    :return: string representation. e.g. '51345076'
+    '''
+    str = '%d%d%d%d%d%d%d%d'%(list[0], list[1], list[2], list[3], list[4], list[5], list[6], list[7])
+    return str
+
+def stringToList(str):
+    '''
+        return an array of the board
+    :param str: the string version of the board. e.g. '51345076'
+    :return: the array representation. e.g. [5, 1, 3, 2, 4, 0, 7, 6]
+    '''
+
+    board = []
+    for i in range(0, 8):
+        board.append(ord(str[i]) - 48)
+
+    return board
+
+def generateRandom8Queen():
+
+    '''
+        build a random board state
+    :return: return a string of the board
+    '''
+
+    board = range(0, 8)
+    for i in range(0, 8):
+        board[i] = random.randint(0, 7)
+    strBoard = listToString(board)
+
+    return strBoard
+
+def generateChildren(StringBoard):
+    '''
+
+    :param StringBoard: string representation of the board
+    :return: array of all children boards
+    '''
+
+    board = stringToList(StringBoard)
+    children = []
+
+    for i in range(0, 8): #across the row of a board
+        newBoardList = board
+        for j in range(0, 8): #across the col of a board
+
+            #if j does not match the current element of the board
+            if(j != newBoardList[i]):
+                newBoardList[i] = j #change the position of that queen
+
+                #save board as a string
+                newBoardString = listToString(newBoardList) #change the array into a string
+                children.append(newBoardString) #save the new board-state
+
+    return children
+
+def boardEval(StringBoard):
+    '''
+
+    :param StringBoard: string representation of the board
+    :return: returns the number of attacking pairs of queens in the board state
+    '''
+
+    currentScore = 0
+    for i in range(0, 8): #check across every row of the board
+        for j in range(i+1, 8): #only needs to check "ahead" of each queen. Checking behind each queen would double count
+
+            rowSearch = abs(i - j) #determines if there are queens sharing rows
+            diagSearch = abs(ord(StringBoard[i]) - ord(StringBoard[j])) #determines if queens are sharing diagonals
+
+            if(rowSearch == 0 or diagSearch == 0 or rowSearch == diagSearch):
+                currentScore = currentScore + 1
+    return currentScore
+
+def addScoredBoard(StringBoard, queue):
+    '''
+
+    :param board: string board
+    :param queue: queue of boards + scores (board, score)
+    :return: nothing
+    '''
+
+    global ScoredboardDB
+
+    score = boardEval(StringBoard)
+    ScoredboardDB[StringBoard] = score #add the baord to the dictionary of scored boards
+
+    queue.append((StringBoard, score))
+
+    return
+
+def KBS8Q(k):
+    '''
+
+    :param k: the number of beams the search will use for each step
+    :return:
+    '''
+    if (k < 0 or k > 500):
+        print "k is out of bounds"
+        return
+
+    #begin k-beam search
+
+    fringe = []
+    for i in range(0, k):
+        addScoredBoard(generateRandom8Queen(), fringe)
+
+    sortedFringe = sorted(fringe, key = lambda node: node[1])
+    best = sortedFringe[0] #best is the board, score tuple with lowest score
+    bestScore = best[1]
+    lastbestScore = bestScore + 1
+
+    #beam search loop
+
+    while(bestScore > 0 and lastbestScore > bestScore):
+
+        fringe2 = []
+        for boardStrings in sortedFringe:
+            for kids in generateChildren(boardStrings[0]):
+                addScoredBoard(kids, fringe2)
+
+        sortedFringe2 = sorted(fringe2, key = lambda node: node[1])
+        lastbestScore = bestScore
+        best = sortedFringe2[0]
+        bestScore = best[1]
+        sortedFringe = sortedFringe2[0:k] #whittle down the boards until only the k-seeds remain
+        #repeat the process from here
+
+    return
+
+def runKBS(numTrials, k):
+    '''
+
+    :param numTrials: The number of times to execute the search
+    :param k: the number of beams in the search
+    :return: n/a
+    '''
+
+    for i in range(0, numTrials):
+        KBS8Q(k)
+
+    return
